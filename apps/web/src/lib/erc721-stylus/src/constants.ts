@@ -201,6 +201,58 @@ export const ERC721_ABI = [
     outputs: [],
     stateMutability: 'nonpayable',
   },
+  // Medical access-control functions
+  {
+    type: 'function',
+    name: 'grantAccess',
+    inputs: [
+      { name: 'tokenId', type: 'uint256' },
+      { name: 'doctor', type: 'address' },
+    ],
+    outputs: [],
+    stateMutability: 'nonpayable',
+  },
+  {
+    type: 'function',
+    name: 'grantAccessWithExpiry',
+    inputs: [
+      { name: 'tokenId', type: 'uint256' },
+      { name: 'doctor', type: 'address' },
+      { name: 'expiresAt', type: 'uint256' },
+    ],
+    outputs: [],
+    stateMutability: 'nonpayable',
+  },
+  {
+    type: 'function',
+    name: 'revokeAccess',
+    inputs: [
+      { name: 'tokenId', type: 'uint256' },
+      { name: 'doctor', type: 'address' },
+    ],
+    outputs: [],
+    stateMutability: 'nonpayable',
+  },
+  {
+    type: 'function',
+    name: 'checkAccess',
+    inputs: [
+      { name: 'tokenId', type: 'uint256' },
+      { name: 'user', type: 'address' },
+    ],
+    outputs: [{ name: '', type: 'bool' }],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    name: 'getAccessExpiry',
+    inputs: [
+      { name: 'tokenId', type: 'uint256' },
+      { name: 'user', type: 'address' },
+    ],
+    outputs: [{ name: '', type: 'uint256' }],
+    stateMutability: 'view',
+  },
   // Events
   {
     type: 'event',

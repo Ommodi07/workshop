@@ -4,6 +4,7 @@
 
 import type { Address, Hash, PublicClient, WalletClient } from 'viem';
 import type { SupportedNetwork } from './constants';
+import type { PatientHealthNFTMetadata } from '@/lib/medical-metadata';
 
 /**
  * Collection deployment parameters
@@ -34,6 +35,8 @@ export interface CollectionInfo {
   address: Address;
   name: string;
   symbol: string;
+  // Base URI currently points to off-chain metadata endpoint/prefix.
+  // Record-level medical metadata is not modeled yet in this template.
   baseUri: string;
   totalSupply: bigint;
   formattedTotalSupply: string;
@@ -47,6 +50,7 @@ export interface CollectionInfo {
 export interface NFTInfo {
   tokenId: bigint;
   owner: Address;
+  // tokenUri is read from tokenURI(tokenId) and treated as opaque metadata URL/string.
   tokenUri: string;
   approved: Address;
 }
@@ -140,7 +144,8 @@ export interface UseERC721InteractionsReturn {
   getNFTInfo: (tokenId: bigint) => Promise<NFTInfo>;
   
   // Transactions (uses wallet popup)
-  mint: (to: Address) => Promise<{ hash: Hash; tokenId: bigint }>;
+  // Optional metadata is prepared for off-chain storage and is never written as raw data on-chain.
+  mint: (to: Address, metadata?: PatientHealthNFTMetadata) => Promise<{ hash: Hash; tokenId: bigint }>;
   transferFrom: (from: Address, to: Address, tokenId: bigint) => Promise<Hash>;
   safeTransferFrom: (from: Address, to: Address, tokenId: bigint) => Promise<Hash>;
   approve: (approved: Address, tokenId: bigint) => Promise<Hash>;
@@ -150,6 +155,11 @@ export interface UseERC721InteractionsReturn {
   pause: () => Promise<Hash>;
   unpause: () => Promise<Hash>;
   transferOwnership: (newOwner: Address) => Promise<Hash>;
+  grantAccess: (tokenId: bigint, doctor: Address) => Promise<Hash>;
+  grantAccessWithExpiry: (tokenId: bigint, doctor: Address, expiresAt: bigint) => Promise<Hash>;
+  revokeAccess: (tokenId: bigint, doctor: Address) => Promise<Hash>;
+  checkAccess: (tokenId: bigint, user: Address) => Promise<boolean>;
+  getAccessExpiry: (tokenId: bigint, user: Address) => Promise<bigint>;
   
   // Transaction state
   txState: TransactionState;

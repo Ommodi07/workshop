@@ -2,7 +2,7 @@
 
 import { ReactNode } from 'react';
 import { RainbowKitProvider, darkTheme } from '@rainbow-me/rainbowkit';
-import { WagmiProvider, type Config } from 'wagmi';
+import { WagmiProvider } from 'wagmi';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import '@rainbow-me/rainbowkit/styles.css';
@@ -11,7 +11,7 @@ const queryClient = new QueryClient();
 
 export interface WalletProviderProps {
     children: ReactNode;
-    config: Config;
+    config: React.ComponentProps<typeof WagmiProvider>['config'];
 }
 
 export function WalletProvider({ children, config }: WalletProviderProps) {

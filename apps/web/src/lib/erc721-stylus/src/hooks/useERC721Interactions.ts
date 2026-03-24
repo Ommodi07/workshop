@@ -5,6 +5,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import type { Address, Hash } from 'viem';
 import { ERC721_ABI } from '../constants';
+import type { PatientHealthNFTMetadata } from '@/lib/medical-metadata';
 import type { 
   UseERC721InteractionsOptions, 
   UseERC721InteractionsReturn,
@@ -71,6 +72,8 @@ export function useERC721Interactions(options: UseERC721InteractionsOptions): Us
       setCollectionInfo({
         status: 'success',
         data: {
+          // Current metadata model at collection level:
+          // name + symbol + baseUri (not medical-record JSON metadata yet).
           address: contractAddress,
           name,
           symbol,
@@ -184,12 +187,24 @@ export function useERC721Interactions(options: UseERC721InteractionsOptions): Us
   }, [walletClient, publicClient, contractAddress]);
 
   // Mint
-  const mint = useCallback(async (to: Address): Promise<{ hash: Hash; tokenId: bigint }> => {
+  const mint = useCallback(async (
+    to: Address,
+    metadata?: PatientHealthNFTMetadata,
+  ): Promise<{ hash: Hash; tokenId: bigint }> => {
     if (!publicClient) {
       throw new Error('Public client is required');
     }
 
-    // Get current total supply to estimate token ID
+    // The metadata payload is intentionally off-chain and should be uploaded/pinned separately.
+    // The mint transaction itself only records NFT ownership on-chain.
+    if (metadata) {
+      void metadata;
+    }
+
+    // Current mint flow:
+    // 1) read totalSupply
+    // 2) call contract mint(to)
+    // 3) estimate new tokenId as totalSupply + 1
     const totalSupplyBefore = await publicClient.readContract({
       address: contractAddress,
       abi: ERC721_ABI,
@@ -267,6 +282,52 @@ export function useERC721Interactions(options: UseERC721InteractionsOptions): Us
     return hash;
   }, [executeTransaction, refetchCollectionInfo]);
 
+  // Grant doctor access to records linked with tokenId (owner only on contract side)
+  const grantAccess = useCallback(async (tokenId: bigint, doctor: Address): Promise<Hash> => {
+    return executeTransaction('grantAccess', [tokenId, doctor]);
+  }, [executeTransaction]);
+
+  // Grant doctor access with expiry timestamp (unix seconds)
+  const grantAccessWithExpiry = useCallback(
+    async (tokenId: bigint, doctor: Address, expiresAt: bigint): Promise<Hash> => {
+      return executeTransaction('grantAccessWithExpiry', [tokenId, doctor, expiresAt]);
+    },
+    [executeTransaction],
+  );
+
+  // Revoke doctor access to records linked with tokenId (owner only on contract side)
+  const revokeAccess = useCallback(async (tokenId: bigint, doctor: Address): Promise<Hash> => {
+    return executeTransaction('revokeAccess', [tokenId, doctor]);
+  }, [executeTransaction]);
+
+  // Read current access state for a token/user pair
+  const checkAccess = useCallback(async (tokenId: bigint, user: Address): Promise<boolean> => {
+    if (!publicClient) {
+      throw new Error('Public client is required');
+    }
+
+    return publicClient.readContract({
+      address: contractAddress,
+      abi: ERC721_ABI,
+      functionName: 'checkAccess',
+      args: [tokenId, user],
+    }) as Promise<boolean>;
+  }, [publicClient, contractAddress]);
+
+  // Read configured access expiry (0 means no expiry configured)
+  const getAccessExpiry = useCallback(async (tokenId: bigint, user: Address): Promise<bigint> => {
+    if (!publicClient) {
+      throw new Error('Public client is required');
+    }
+
+    return publicClient.readContract({
+      address: contractAddress,
+      abi: ERC721_ABI,
+      functionName: 'getAccessExpiry',
+      args: [tokenId, user],
+    }) as Promise<bigint>;
+  }, [publicClient, contractAddress]);
+
   return {
     collectionInfo,
     refetchCollectionInfo,
@@ -283,6 +344,11 @@ export function useERC721Interactions(options: UseERC721InteractionsOptions): Us
     pause,
     unpause,
     transferOwnership,
+    grantAccess,
+    grantAccessWithExpiry,
+    revokeAccess,
+    checkAccess,
+    getAccessExpiry,
     txState,
     isLoading: txState.status === 'pending' || txState.status === 'confirming',
     error,
